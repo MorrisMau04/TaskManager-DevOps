@@ -100,6 +100,7 @@ function crearTarjeta(tarea) {
   etiquetaEstado.className = `badge badge-estado e-${slug(tarea.estado)}`;
   etiquetaEstado.textContent = tarea.estado;
   acciones.append(etiquetaEstado);
+  acciones.append(boton("Editar", "editar"));
   return li;
 }
 
@@ -133,6 +134,7 @@ function limpiarFormulario() {
   estadoApp.editandoId = null;
   $("#titulo-formulario").textContent = "Nueva tarea";
   $("#boton-guardar").textContent = "Guardar tarea";
+  $("#boton-cancelar").hidden = true;
 }
 
 async function guardarTarea(evento) {
@@ -147,13 +149,38 @@ async function guardarTarea(evento) {
   }
   try {
     let resultado;
+    if (estadoApp.editandoId) {
+      resultado = await peticion(`${API}/${estadoApp.editandoId}`, {
+        method: "PUT", body: JSON.stringify(datos),
+      });
+    } else {
       resultado = await peticion(API, { method: "POST", body: JSON.stringify(datos) });
+    }
     mostrarMensaje(resultado.mensaje);
     limpiarFormulario();
     await cargarTareas();
   } catch (e) {
     mostrarMensaje(e.message, "error");
   }
+}
+
+// ----------------------------------------------------------------------------
+// RF03: Editar tareas
+// ----------------------------------------------------------------------------
+function iniciarEdicion(id) {
+  const tarea = estadoApp.tareas.find((t) => t.id === id);
+  if (!tarea) return;
+  const form = $("#formulario-tarea");
+  estadoApp.editandoId = id;
+  form.nombre.value = tarea.nombre;
+  form.descripcion.value = tarea.descripcion;
+  form.prioridad.value = tarea.prioridad;
+  form.estado.value = tarea.estado;
+  $("#titulo-formulario").textContent = `Editar tarea #${id}`;
+  $("#boton-guardar").textContent = "Guardar cambios";
+  $("#boton-cancelar").hidden = false;
+  form.nombre.focus();
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ----------------------------------------------------------------------------
@@ -165,11 +192,13 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#error-nombre").textContent = "";
     $("#nombre").removeAttribute("aria-invalid");
   });
+  $("#boton-cancelar").addEventListener("click", limpiarFormulario);
   const lista = $("#lista-tareas");
   lista.addEventListener("click", (evento) => {
     const control = evento.target.closest("button[data-accion]");
     if (!control) return;
     const id = Number(control.closest(".tarea").dataset.id);
+    if (control.dataset.accion === "editar") iniciarEdicion(id);
   });
   cargarTareas();
 });
