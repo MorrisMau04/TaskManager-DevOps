@@ -4,8 +4,10 @@ Backend en Flask con base de datos SQLite. Expone una API REST en /api/tareas
 que consume la interfaz web (templates/index.html + static/js/app.js).
 """
 
+import logging
 import os
 import sqlite3
+import time
 
 from flask import Flask, current_app, g, jsonify, render_template, request
 
@@ -14,6 +16,7 @@ ESTADOS = ("Pendiente", "En proceso", "Terminada")
 PRIORIDADES = ("Alta", "Media", "Baja")
 MAX_NOMBRE = 120
 MAX_DESCRIPCION = 1000
+UMBRAL_LENTO_MS = 500
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS tareas (
@@ -157,8 +160,60 @@ def create_app(config=None):
         app.config.update(config)
     app.json.ensure_ascii = False
 
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
+    app.config["INICIO"] = time.time()
+
     init_db(app.config["DATABASE"])
     app.teardown_appcontext(cerrar_db)
+
+    # ---------------------------- Monitoreo ----------------------------
+    @app.before_request
+    def iniciar_cronometro():
+        g.inicio = time.perf_counter()
+
+    @app.after_request
+    def registrar_peticion(respuesta):
+        inicio = g.pop("inicio", None)
+        if inicio is not None:
+            duracion_ms = (time.perf_counter() - inicio) * 1000
+            respuesta.headers["X-Response-Time"] = f"{duracion_ms:.1f}ms"
+            nivel = logging.WARNING if duracion_ms > UMBRAL_LENTO_MS else logging.INFO
+            app.logger.log(
+                nivel, "%s %s -> %s (%.1f ms)",
+                request.method, request.path, respuesta.status_code, duracion_ms,
+            )
+        return respuesta
+
+    @app.get("/health")
+    def health():
+        """Punto de verificación para el monitoreo y la plataforma de despliegue."""
+        inicio = time.perf_counter()
+        try:
+            total = get_db().execute("SELECT COUNT(*) FROM tareas").fetchone()[0]
+            estado_bd = "ok"
+        except sqlite3.Error:
+            app.logger.exception("La base de datos no responde")
+            total, estado_bd = None, "error"
+        cuerpo = {
+            "status": "ok" if estado_bd == "ok" else "degradado",
+            "base_de_datos": estado_bd,
+            "tareas_registradas": total,
+            "version": VERSION,
+            "uptime_segundos": round(time.time() - app.config["INICIO"]),
+            "tiempo_bd_ms": round((time.perf_counter() - inicio) * 1000, 2),
+        }
+        return jsonify(cuerpo), 200 if estado_bd == "ok" else 503
+
+    @app.errorhandler(500)
+    def error_interno(exc):
+        app.logger.error("Error interno en %s %s: %s", request.method, request.path,
+                         getattr(exc, "original_exception", exc))
+        if request.path.startswith("/api/"):
+            return error("Ocurrió un error inesperado en el servidor.", 500)
+        return "Error interno del servidor", 500
 
     @app.errorhandler(404)
     def no_encontrado(_exc):

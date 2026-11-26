@@ -1,0 +1,58 @@
+name: Monitoreo
+
+on:
+  schedule:
+    - cron: '17 */3 * * *'   # cada 3 horas
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Revisar disponibilidad y tiempo de respuesta
+        id: revision
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::warning::Define la variable APP_URL (Settings > Secrets and variables > Actions > Variables)."
+            echo "estado=omitido" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          {
+            echo "### Monitoreo de TaskManager ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            echo "| Ruta | Codigo HTTP | Tiempo (s) |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          fallas=0
+          for ruta in /health / /api/tareas; do
+            resultado=$(curl -s -o /dev/null --max-time 90 -w '%{http_code} %{time_total}' "$APP_URL$ruta" || echo "000 0")
+            codigo=${resultado%% *}; tiempo=${resultado##* }
+            echo "| \`$ruta\` | $codigo | $tiempo |" >> "$GITHUB_STEP_SUMMARY"
+            [ "$codigo" = "200" ] || fallas=$((fallas + 1))
+          done
+          curl -s --max-time 90 "$APP_URL/health" > health.json || true
+          { echo; echo '```json'; cat health.json; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$fallas" -gt 0 ]; then echo "estado=falla" >> "$GITHUB_OUTPUT"; else echo "estado=ok" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Registrar incidencia automaticamente
+        if: steps.revision.outputs.estado == 'falla'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          abiertas=$(gh issue list --label incidencia --state open --search "Monitoreo:" --json number --jq 'length')
+          if [ "$abiertas" -gt 0 ]; then echo "Ya existe una incidencia abierta."; exit 0; fi
+          gh issue create \
+            --title "Monitoreo: la aplicacion no responde correctamente" \
+            --label incidencia --label "fase: operate" \
+            --body "**Fecha de deteccion:** $(date -u '+%Y-%m-%d %H:%M UTC')
+          **Funcionalidad afectada:** disponibilidad general ($APP_URL)
+          **Descripcion del problema:** el monitoreo automatico obtuvo una respuesta distinta de 200.
+          **Evidencia del error:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Responsable de corregirlo:** _por asignar_
+          **Solucion aplicada:** _pendiente_"
