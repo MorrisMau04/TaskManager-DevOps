@@ -1,0 +1,15 @@
+# Blueprint de Render: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: taskmanager-devops
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /health
+    autoDeploy: false   # el despliegue lo dispara GitHub Actions cuando pasan las pruebas
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: LOG_LEVEL
+        value: INFO
