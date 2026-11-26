@@ -28,3 +28,16 @@ def test_pagina_principal_carga(client):
     assert "TaskManager" in respuesta.get_data(as_text=True)
 
 
+# ----------------------------- RF02: Consultar -----------------------------
+def test_listado_vacio(client):
+    respuesta = client.get("/api/tareas")
+    assert respuesta.status_code == 200
+    assert respuesta.get_json() == []
+
+
+def test_consultar_tarea_inexistente(client):
+    respuesta = client.get("/api/tareas/999")
+    assert respuesta.status_code == 404
+    assert respuesta.get_json()["error"] == "La tarea no existe."
+
+
