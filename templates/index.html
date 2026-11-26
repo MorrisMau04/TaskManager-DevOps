@@ -67,6 +67,18 @@
       <section class="panel" aria-labelledby="titulo-listado">
         <div class="listado-cabecera">
           <h2 id="titulo-listado">Tareas registradas</h2>
+          <div class="filtros">
+            <label class="oculto" for="filtro-estado">Filtrar por estado</label>
+            <select id="filtro-estado">
+              <option value="">Todos los estados</option>
+              {% for e in estados %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
+            </select>
+            <label class="oculto" for="filtro-prioridad">Filtrar por prioridad</label>
+            <select id="filtro-prioridad">
+              <option value="">Todas las prioridades</option>
+              {% for p in prioridades %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
         </div>
         <ul id="lista-tareas" class="lista-tareas" aria-live="polite"></ul>
         <p id="sin-tareas" class="vacio" hidden>No hay tareas para mostrar.</p>
