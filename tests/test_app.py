@@ -105,3 +105,38 @@ def test_eliminar_tarea_inexistente(client):
     assert client.delete("/api/tareas/999").status_code == 404
 
 
+# ------------------------ RF05 y RF06: Estado y prioridad ------------------
+@pytest.mark.parametrize("estado", ["Pendiente", "En proceso", "Terminada"])
+def test_cambiar_estado(client, estado):
+    tarea_id = crear(client).get_json()["tarea"]["id"]
+    respuesta = client.patch(f"/api/tareas/{tarea_id}/estado", json={"estado": estado})
+    assert respuesta.status_code == 200
+    listado = client.get("/api/tareas").get_json()
+    assert listado[0]["estado"] == estado
+
+
+def test_cambiar_estado_invalido(client):
+    tarea_id = crear(client).get_json()["tarea"]["id"]
+    respuesta = client.patch(f"/api/tareas/{tarea_id}/estado", json={"estado": "Archivada"})
+    assert respuesta.status_code == 400
+
+
+@pytest.mark.parametrize("prioridad", ["Alta", "Media", "Baja"])
+def test_prioridad_se_guarda(client, prioridad):
+    tarea = crear(client, prioridad=prioridad).get_json()["tarea"]
+    assert tarea["prioridad"] == prioridad
+
+
+def test_prioridad_invalida(client):
+    assert crear(client, prioridad="Urgentísima").status_code == 400
+
+
+def test_filtrar_por_estado_y_prioridad(client):
+    crear(client, nombre="A", prioridad="Alta")
+    crear(client, nombre="B", prioridad="Baja", estado="Terminada")
+    altas = client.get("/api/tareas?prioridad=Alta").get_json()
+    terminadas = client.get("/api/tareas?estado=Terminada").get_json()
+    assert [t["nombre"] for t in altas] == ["A"]
+    assert [t["nombre"] for t in terminadas] == ["B"]
+
+
