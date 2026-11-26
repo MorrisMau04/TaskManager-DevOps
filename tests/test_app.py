@@ -71,3 +71,24 @@ def test_tarea_registrada_aparece_en_listado(client):
     assert "Elaborar documentación" in nombres
 
 
+# ------------------------------ RF03: Editar -------------------------------
+def test_editar_tarea(client):
+    tarea_id = crear(client).get_json()["tarea"]["id"]
+    respuesta = client.put(f"/api/tareas/{tarea_id}",
+                           json={"nombre": "Nombre corregido", "descripcion": "Nueva"})
+    assert respuesta.status_code == 200
+    tarea = client.get(f"/api/tareas/{tarea_id}").get_json()
+    assert tarea["nombre"] == "Nombre corregido"
+    assert tarea["descripcion"] == "Nueva"
+
+
+def test_editar_tarea_inexistente(client):
+    assert client.put("/api/tareas/999", json={"nombre": "X"}).status_code == 404
+
+
+def test_editar_tarea_con_nombre_vacio(client):
+    tarea_id = crear(client).get_json()["tarea"]["id"]
+    respuesta = client.put(f"/api/tareas/{tarea_id}", json={"nombre": ""})
+    assert respuesta.status_code == 400
+
+

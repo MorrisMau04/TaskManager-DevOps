@@ -63,6 +63,18 @@ def obtener_tarea(tarea_id):
     return dict(fila) if fila else None
 
 
+def actualizar_tarea(tarea_id, campos):
+    """Actualiza solo las columnas validadas (las claves vienen de validar_tarea)."""
+    asignaciones = ", ".join(f"{columna} = ?" for columna in campos)
+    db = get_db()
+    db.execute(
+        f"UPDATE tareas SET {asignaciones}, actualizada_en = datetime('now', 'localtime') "
+        "WHERE id = ?",
+        (*campos.values(), tarea_id),
+    )
+    db.commit()
+
+
 def error(mensaje, codigo, detalles=None):
     return jsonify({"error": mensaje, "detalles": detalles or []}), codigo
 
@@ -193,6 +205,22 @@ def create_app(config=None):
             "mensaje": "Tarea registrada correctamente.",
             "tarea": obtener_tarea(cursor.lastrowid),
         }), 201
+
+    # ------------------------- RF03: Editar -----------------------------
+    @app.put("/api/tareas/<int:tarea_id>")
+    def editar_tarea(tarea_id):
+        if obtener_tarea(tarea_id) is None:
+            return error("La tarea no existe.", 404)
+        campos, errores = validar_tarea(request.get_json(silent=True), parcial=True)
+        if errores:
+            return error("Los datos de la tarea no son válidos.", 400, errores)
+        if not campos:
+            return error("No se envió ningún campo para actualizar.", 400)
+        actualizar_tarea(tarea_id, campos)
+        return jsonify({
+            "mensaje": "Tarea actualizada correctamente.",
+            "tarea": obtener_tarea(tarea_id),
+        })
 
     return app
 
