@@ -52,7 +52,10 @@ async function cargarTareas() {
 }
 
 function tareasVisibles() {
-  return estadoApp.tareas;
+  const estado = $("#filtro-estado").value;
+  const prioridad = $("#filtro-prioridad").value;
+  return estadoApp.tareas.filter((t) =>
+    (!estado || t.estado === estado) && (!prioridad || t.prioridad === prioridad));
 }
 
 function actualizarContadores() {
@@ -96,10 +99,12 @@ function crearTarjeta(tarea) {
   li.querySelector(".tarea-meta").textContent = `#${tarea.id} · ${tarea.actualizada_en}`;
 
   const acciones = li.querySelector(".tarea-acciones");
-  const etiquetaEstado = document.createElement("span");
-  etiquetaEstado.className = `badge badge-estado e-${slug(tarea.estado)}`;
-  etiquetaEstado.textContent = tarea.estado;
-  acciones.append(etiquetaEstado);
+  const selector = document.createElement("select");
+  selector.className = `selector-estado e-${slug(tarea.estado)}`;
+  selector.dataset.accion = "estado";
+  selector.setAttribute("aria-label", `Estado de la tarea ${tarea.nombre}`);
+  ESTADOS.forEach((estado) => selector.add(new Option(estado, estado, false, estado === tarea.estado)));
+  acciones.append(selector);
   acciones.append(boton("Editar", "editar"));
   acciones.append(boton("Eliminar", "eliminar", "peligro"));
   return li;
@@ -201,6 +206,22 @@ async function eliminarTarea(id) {
 }
 
 // ----------------------------------------------------------------------------
+// RF05: Cambiar estado
+// ----------------------------------------------------------------------------
+async function cambiarEstado(id, estado) {
+  try {
+    const resultado = await peticion(`${API}/${id}/estado`, {
+      method: "PATCH", body: JSON.stringify({ estado }),
+    });
+    mostrarMensaje(resultado.mensaje);
+    await cargarTareas();
+  } catch (e) {
+    mostrarMensaje(e.message, "error");
+    renderizar();
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Inicio
 // ----------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
@@ -210,6 +231,8 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#nombre").removeAttribute("aria-invalid");
   });
   $("#boton-cancelar").addEventListener("click", limpiarFormulario);
+  $("#filtro-estado").addEventListener("change", renderizar);
+  $("#filtro-prioridad").addEventListener("change", renderizar);
   const lista = $("#lista-tareas");
   lista.addEventListener("click", (evento) => {
     const control = evento.target.closest("button[data-accion]");
@@ -217,6 +240,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const id = Number(control.closest(".tarea").dataset.id);
     if (control.dataset.accion === "editar") iniciarEdicion(id);
     if (control.dataset.accion === "eliminar") eliminarTarea(id);
+  });
+  lista.addEventListener("change", (evento) => {
+    if (evento.target.dataset.accion !== "estado") return;
+    const id = Number(evento.target.closest(".tarea").dataset.id);
+    cambiarEstado(id, evento.target.value);
   });
   cargarTareas();
 });

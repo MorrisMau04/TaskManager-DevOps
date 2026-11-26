@@ -173,6 +173,15 @@ def create_app(config=None):
     def listar_tareas():
         consulta = "SELECT * FROM tareas"
         filtros, parametros = [], []
+        for campo, permitidos in (("estado", ESTADOS), ("prioridad", PRIORIDADES)):
+            valor = request.args.get(campo)
+            if valor:
+                normalizado = normalizar(valor, permitidos)
+                if normalizado is None:
+                    return error(f"Filtro de {campo} inválido.", 400,
+                                 [f"Valores permitidos: {', '.join(permitidos)}."])
+                filtros.append(f"{campo} = ?")
+                parametros.append(normalizado)
         if filtros:
             consulta += " WHERE " + " AND ".join(filtros)
         consulta += (
@@ -231,6 +240,22 @@ def create_app(config=None):
         db.execute("DELETE FROM tareas WHERE id = ?", (tarea_id,))
         db.commit()
         return jsonify({"mensaje": "Tarea eliminada correctamente.", "id": tarea_id})
+
+    # --------------------- RF05: Cambiar estado -------------------------
+    @app.patch("/api/tareas/<int:tarea_id>/estado")
+    def cambiar_estado(tarea_id):
+        if obtener_tarea(tarea_id) is None:
+            return error("La tarea no existe.", 404)
+        datos = request.get_json(silent=True) or {}
+        estado = normalizar(datos.get("estado"), ESTADOS)
+        if estado is None:
+            return error("Estado inválido.", 400,
+                         [f"Valores permitidos: {', '.join(ESTADOS)}."])
+        actualizar_tarea(tarea_id, {"estado": estado})
+        return jsonify({
+            "mensaje": f"Estado cambiado a «{estado}».",
+            "tarea": obtener_tarea(tarea_id),
+        })
 
     return app
 
