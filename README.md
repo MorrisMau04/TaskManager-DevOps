@@ -46,7 +46,7 @@ TaskManager-DevOps/
 ## Ejecutar en tu computadora
 
 ```bash
-git clone https://github.com/USUARIO/TaskManager-DevOps.git
+git clone https://github.com/MorrisMau04/TaskManager-DevOps.git
 cd TaskManager-DevOps
 python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
@@ -104,6 +104,6 @@ pytest -v
 
 | Integrante | Rol |
 |------------|-----|
-| Integrante 1 | Product Owner y desarrollador backend |
-| Integrante 2 | Desarrollador de interfaz y documentación |
-| Integrante 3 | Ingeniero DevOps / QA |
+| Mauricio Solis Ruiz | Product Owner y desarrollador backend |
+| Mauricio Solis Ruiz | Desarrollador de interfaz y documentación |
+| Mauricio Solis Ruiz | Ingeniero DevOps / QA |
