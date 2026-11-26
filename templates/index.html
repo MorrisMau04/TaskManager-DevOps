@@ -26,6 +26,42 @@
     </section>
 
     <div class="diseno">
+      <section class="panel" aria-labelledby="titulo-formulario">
+        <h2 id="titulo-formulario">Nueva tarea</h2>
+        <form id="formulario-tarea" novalidate>
+          <label for="nombre">Nombre de la tarea <abbr title="obligatorio">*</abbr></label>
+          <input id="nombre" name="nombre" type="text" maxlength="120"
+                 placeholder="Ej. Elaborar documentación" autocomplete="off">
+          <p class="error-campo" id="error-nombre" role="alert"></p>
+
+          <label for="descripcion">Descripción</label>
+          <textarea id="descripcion" name="descripcion" rows="3" maxlength="1000"
+                    placeholder="Detalles de la actividad (opcional)"></textarea>
+
+          <div class="fila-campos">
+            <div>
+              <label for="prioridad">Prioridad</label>
+              <select id="prioridad" name="prioridad">
+                {% for p in prioridades %}
+                <option value="{{ p }}" {% if p == 'Media' %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="estado">Estado</label>
+              <select id="estado" name="estado">
+                {% for e in estados %}
+                <option value="{{ e }}">{{ e }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="acciones-formulario">
+            <button type="submit" class="boton primario" id="boton-guardar">Guardar tarea</button>
+          </div>
+        </form>
+      </section>
 
       <section class="panel" aria-labelledby="titulo-listado">
         <div class="listado-cabecera">

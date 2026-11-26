@@ -68,6 +68,64 @@ def error(mensaje, codigo, detalles=None):
 
 
 # ---------------------------------------------------------------------------
+# Validación
+# ---------------------------------------------------------------------------
+def normalizar(valor, permitidos):
+    """Acepta el valor sin importar mayúsculas y devuelve la forma oficial."""
+    if not isinstance(valor, str):
+        return None
+    for opcion in permitidos:
+        if valor.strip().lower() == opcion.lower():
+            return opcion
+    return None
+
+
+def validar_tarea(datos, parcial=False):
+    """Valida los datos de una tarea.
+
+    Devuelve (campos_limpios, errores). Con parcial=True solo se validan los
+    campos enviados (se usa al editar).
+    """
+    if not isinstance(datos, dict):
+        return {}, ["El cuerpo de la petición debe ser un objeto JSON."]
+
+    limpio, errores = {}, []
+
+    if "nombre" in datos or not parcial:
+        nombre = datos.get("nombre")
+        nombre = nombre.strip() if isinstance(nombre, str) else ""
+        if not nombre:
+            errores.append("El nombre de la tarea es obligatorio.")
+        elif len(nombre) > MAX_NOMBRE:
+            errores.append(f"El nombre no puede superar {MAX_NOMBRE} caracteres.")
+        else:
+            limpio["nombre"] = nombre
+
+    if "descripcion" in datos or not parcial:
+        descripcion = datos.get("descripcion", "").strip()
+        if len(descripcion) > MAX_DESCRIPCION:
+            errores.append(f"La descripción no puede superar {MAX_DESCRIPCION} caracteres.")
+        else:
+            limpio["descripcion"] = descripcion
+
+    if "prioridad" in datos or not parcial:
+        prioridad = normalizar(datos.get("prioridad", "Media"), PRIORIDADES)
+        if prioridad is None:
+            errores.append(f"La prioridad debe ser una de: {', '.join(PRIORIDADES)}.")
+        else:
+            limpio["prioridad"] = prioridad
+
+    if "estado" in datos or not parcial:
+        estado = normalizar(datos.get("estado", "Pendiente"), ESTADOS)
+        if estado is None:
+            errores.append(f"El estado debe ser uno de: {', '.join(ESTADOS)}.")
+        else:
+            limpio["estado"] = estado
+
+    return limpio, errores
+
+
+# ---------------------------------------------------------------------------
 # Aplicación
 # ---------------------------------------------------------------------------
 def create_app(config=None):
@@ -118,6 +176,23 @@ def create_app(config=None):
         if tarea is None:
             return error("La tarea no existe.", 404)
         return jsonify(tarea)
+
+    # ------------------------ RF01: Registrar ---------------------------
+    @app.post("/api/tareas")
+    def registrar_tarea():
+        campos, errores = validar_tarea(request.get_json(silent=True))
+        if errores:
+            return error("Los datos de la tarea no son válidos.", 400, errores)
+        db = get_db()
+        cursor = db.execute(
+            "INSERT INTO tareas (nombre, descripcion, prioridad, estado) VALUES (?, ?, ?, ?)",
+            (campos["nombre"], campos["descripcion"], campos["prioridad"], campos["estado"]),
+        )
+        db.commit()
+        return jsonify({
+            "mensaje": "Tarea registrada correctamente.",
+            "tarea": obtener_tarea(cursor.lastrowid),
+        }), 201
 
     return app
 
