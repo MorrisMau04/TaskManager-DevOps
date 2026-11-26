@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+instance/
+*.db
+.pytest_cache/
+reporte-pruebas.xml
+.env
+.DS_Store
