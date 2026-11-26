@@ -98,6 +98,27 @@ def create_app(config=None):
             "index.html", version=VERSION, estados=ESTADOS, prioridades=PRIORIDADES
         )
 
+    # ------------------------ RF02: Consultar ---------------------------
+    @app.get("/api/tareas")
+    def listar_tareas():
+        consulta = "SELECT * FROM tareas"
+        filtros, parametros = [], []
+        if filtros:
+            consulta += " WHERE " + " AND ".join(filtros)
+        consulta += (
+            " ORDER BY CASE prioridad WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 ELSE 3 END,"
+            " id DESC"
+        )
+        filas = get_db().execute(consulta, parametros).fetchall()
+        return jsonify([dict(fila) for fila in filas])
+
+    @app.get("/api/tareas/<int:tarea_id>")
+    def consultar_tarea(tarea_id):
+        tarea = obtener_tarea(tarea_id)
+        if tarea is None:
+            return error("La tarea no existe.", 404)
+        return jsonify(tarea)
+
     return app
 
 
