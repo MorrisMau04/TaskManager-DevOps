@@ -112,9 +112,59 @@ function renderizar() {
 }
 
 // ----------------------------------------------------------------------------
+// RF01: Registrar tareas (y RF03: editar, con el mismo formulario)
+// ----------------------------------------------------------------------------
+function leerFormulario() {
+  const form = $("#formulario-tarea");
+  return {
+    nombre: form.nombre.value.trim(),
+    descripcion: form.descripcion.value.trim() || null,
+    prioridad: form.prioridad.value,
+    estado: form.estado.value,
+  };
+}
+
+function limpiarFormulario() {
+  const form = $("#formulario-tarea");
+  form.reset();
+  form.prioridad.value = "Media";
+  $("#error-nombre").textContent = "";
+  form.nombre.removeAttribute("aria-invalid");
+  estadoApp.editandoId = null;
+  $("#titulo-formulario").textContent = "Nueva tarea";
+  $("#boton-guardar").textContent = "Guardar tarea";
+}
+
+async function guardarTarea(evento) {
+  evento.preventDefault();
+  const datos = leerFormulario();
+  const form = $("#formulario-tarea");
+  if (!datos.nombre) {
+    $("#error-nombre").textContent = "El nombre de la tarea es obligatorio.";
+    form.nombre.setAttribute("aria-invalid", "true");
+    form.nombre.focus();
+    return;
+  }
+  try {
+    let resultado;
+      resultado = await peticion(API, { method: "POST", body: JSON.stringify(datos) });
+    mostrarMensaje(resultado.mensaje);
+    limpiarFormulario();
+    await cargarTareas();
+  } catch (e) {
+    mostrarMensaje(e.message, "error");
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Inicio
 // ----------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
+  $("#formulario-tarea").addEventListener("submit", guardarTarea);
+  $("#nombre").addEventListener("input", () => {
+    $("#error-nombre").textContent = "";
+    $("#nombre").removeAttribute("aria-invalid");
+  });
   const lista = $("#lista-tareas");
   lista.addEventListener("click", (evento) => {
     const control = evento.target.closest("button[data-accion]");
