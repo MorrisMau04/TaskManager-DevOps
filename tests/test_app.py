@@ -185,3 +185,18 @@ def test_ruta_api_inexistente_devuelve_json(client):
     assert respuesta.is_json
 
 
+# --------------- Issue: error al guardar tareas sin descripción ------------
+@pytest.mark.parametrize("datos", [
+    {"nombre": "Sin descripción"},
+    {"nombre": "Descripción nula", "descripcion": None},
+])
+def test_registrar_tarea_sin_descripcion(client, datos):
+    respuesta = client.post("/api/tareas", json=datos)
+    assert respuesta.status_code == 201
+    assert respuesta.get_json()["tarea"]["descripcion"] == ""
+
+
+def test_descripcion_que_no_es_texto(client):
+    assert crear(client, descripcion=123).status_code == 400
+
+
