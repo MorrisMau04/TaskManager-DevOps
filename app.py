@@ -114,11 +114,16 @@ def validar_tarea(datos, parcial=False):
             limpio["nombre"] = nombre
 
     if "descripcion" in datos or not parcial:
-        descripcion = datos.get("descripcion", "").strip()
-        if len(descripcion) > MAX_DESCRIPCION:
+        # La descripción es opcional: null o ausente se guarda como texto vacío.
+        descripcion = datos.get("descripcion")
+        if descripcion is None:
+            descripcion = ""
+        if not isinstance(descripcion, str):
+            errores.append("La descripción debe ser texto.")
+        elif len(descripcion.strip()) > MAX_DESCRIPCION:
             errores.append(f"La descripción no puede superar {MAX_DESCRIPCION} caracteres.")
         else:
-            limpio["descripcion"] = descripcion
+            limpio["descripcion"] = descripcion.strip()
 
     if "prioridad" in datos or not parcial:
         prioridad = normalizar(datos.get("prioridad", "Media"), PRIORIDADES)
