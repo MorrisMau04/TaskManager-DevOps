@@ -101,6 +101,7 @@ function crearTarjeta(tarea) {
   etiquetaEstado.textContent = tarea.estado;
   acciones.append(etiquetaEstado);
   acciones.append(boton("Editar", "editar"));
+  acciones.append(boton("Eliminar", "eliminar", "peligro"));
   return li;
 }
 
@@ -184,6 +185,22 @@ function iniciarEdicion(id) {
 }
 
 // ----------------------------------------------------------------------------
+// RF04: Eliminar tareas
+// ----------------------------------------------------------------------------
+async function eliminarTarea(id) {
+  const tarea = estadoApp.tareas.find((t) => t.id === id);
+  if (!tarea || !window.confirm(`¿Eliminar la tarea "${tarea.nombre}"?`)) return;
+  try {
+    const resultado = await peticion(`${API}/${id}`, { method: "DELETE" });
+    if (estadoApp.editandoId === id) limpiarFormulario();
+    mostrarMensaje(resultado.mensaje);
+    await cargarTareas();
+  } catch (e) {
+    mostrarMensaje(e.message, "error");
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Inicio
 // ----------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
@@ -199,6 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!control) return;
     const id = Number(control.closest(".tarea").dataset.id);
     if (control.dataset.accion === "editar") iniciarEdicion(id);
+    if (control.dataset.accion === "eliminar") eliminarTarea(id);
   });
   cargarTareas();
 });

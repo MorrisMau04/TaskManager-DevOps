@@ -92,3 +92,16 @@ def test_editar_tarea_con_nombre_vacio(client):
     assert respuesta.status_code == 400
 
 
+# ------------------------------ RF04: Eliminar -----------------------------
+def test_eliminar_tarea(client):
+    tarea_id = crear(client).get_json()["tarea"]["id"]
+    respuesta = client.delete(f"/api/tareas/{tarea_id}")
+    assert respuesta.status_code == 200
+    assert client.get(f"/api/tareas/{tarea_id}").status_code == 404
+    assert client.get("/api/tareas").get_json() == []
+
+
+def test_eliminar_tarea_inexistente(client):
+    assert client.delete("/api/tareas/999").status_code == 404
+
+

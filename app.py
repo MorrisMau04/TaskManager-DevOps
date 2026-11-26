@@ -222,6 +222,16 @@ def create_app(config=None):
             "tarea": obtener_tarea(tarea_id),
         })
 
+    # ------------------------- RF04: Eliminar ---------------------------
+    @app.delete("/api/tareas/<int:tarea_id>")
+    def eliminar_tarea(tarea_id):
+        if obtener_tarea(tarea_id) is None:
+            return error("La tarea no existe.", 404)
+        db = get_db()
+        db.execute("DELETE FROM tareas WHERE id = ?", (tarea_id,))
+        db.commit()
+        return jsonify({"mensaje": "Tarea eliminada correctamente.", "id": tarea_id})
+
     return app
 
 
