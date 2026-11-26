@@ -19,3 +19,4 @@
 
 ### Correcciones
 - Error 500 al guardar una tarea sin descripción.
+- Configuración de pytest (`pytest.ini`) para que la Integración Continua encuentre `app.py`.
