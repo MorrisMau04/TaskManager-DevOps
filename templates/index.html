@@ -18,7 +18,23 @@
   </header>
 
   <main class="contenedor">
-    <p class="vacio">La aplicación está en construcción.</p>
+    <section class="resumen" aria-label="Resumen de tareas">
+      <div class="contador"><span id="total-todas">0</span><small>Total</small></div>
+      <div class="contador pendiente"><span id="total-pendiente">0</span><small>Pendientes</small></div>
+      <div class="contador en-proceso"><span id="total-en-proceso">0</span><small>En proceso</small></div>
+      <div class="contador terminada"><span id="total-terminada">0</span><small>Terminadas</small></div>
+    </section>
+
+    <div class="diseno">
+
+      <section class="panel" aria-labelledby="titulo-listado">
+        <div class="listado-cabecera">
+          <h2 id="titulo-listado">Tareas registradas</h2>
+        </div>
+        <ul id="lista-tareas" class="lista-tareas" aria-live="polite"></ul>
+        <p id="sin-tareas" class="vacio" hidden>No hay tareas para mostrar.</p>
+      </section>
+    </div>
   </main>
 
   <div id="mensaje" class="mensaje" role="status" aria-live="polite" hidden></div>
