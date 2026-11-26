@@ -1,0 +1,52 @@
+name: Despliegue Continuo
+
+# Se ejecuta solo cuando la Integracion Continua termina con exito en main.
+on:
+  workflow_run:
+    workflows: [Integracion Continua]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desplegar:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: produccion
+      url: ${{ vars.APP_URL }}
+    steps:
+      - name: Solicitar despliegue en Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::Falta el secreto RENDER_DEPLOY_HOOK_URL; no se solicito el despliegue."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "Despliegue solicitado a Render." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verificar la aplicacion publicada
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::warning::Falta la variable APP_URL; se omite la verificacion."
+            exit 0
+          fi
+          # Render tarda unos minutos en construir; se reintenta durante ~10 minutos.
+          sleep 60
+          for intento in $(seq 1 18); do
+            if curl --fail --silent --max-time 60 "$APP_URL/health" -o health.json; then
+              echo "Aplicacion disponible (intento $intento):"; cat health.json
+              { echo "### Verificacion posterior al despliegue"; echo '```json'; cat health.json; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::La aplicacion no respondio en $APP_URL/health"
+          exit 1
