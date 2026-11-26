@@ -200,3 +200,19 @@ def test_descripcion_que_no_es_texto(client):
     assert crear(client, descripcion=123).status_code == 400
 
 
+# -------------------------------- Monitoreo --------------------------------
+def test_health(client):
+    crear(client)
+    respuesta = client.get("/health")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.get_json()
+    assert cuerpo["status"] == "ok"
+    assert cuerpo["base_de_datos"] == "ok"
+    assert cuerpo["tareas_registradas"] == 1
+    assert cuerpo["version"] == "1.0.0"
+
+
+def test_cabecera_tiempo_de_respuesta(client):
+    assert client.get("/api/tareas").headers["X-Response-Time"].endswith("ms")
+
+
