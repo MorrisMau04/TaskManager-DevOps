@@ -140,3 +140,48 @@ def test_filtrar_por_estado_y_prioridad(client):
     assert [t["nombre"] for t in terminadas] == ["B"]
 
 
+# ------------------------- Pruebas complementarias -------------------------
+def test_listado_ordenado_por_prioridad(client):
+    crear(client, nombre="Baja", prioridad="Baja")
+    crear(client, nombre="Alta", prioridad="Alta")
+    crear(client, nombre="Media", prioridad="Media")
+    nombres = [t["nombre"] for t in client.get("/api/tareas").get_json()]
+    assert nombres == ["Alta", "Media", "Baja"]
+
+
+def test_prioridad_y_estado_ignoran_mayusculas(client):
+    tarea = crear(client, prioridad="alta", estado="en proceso").get_json()["tarea"]
+    assert (tarea["prioridad"], tarea["estado"]) == ("Alta", "En proceso")
+
+
+def test_nombre_demasiado_largo(client):
+    assert crear(client, nombre="x" * 121).status_code == 400
+
+
+def test_cuerpo_que_no_es_json(client):
+    respuesta = client.post("/api/tareas", data="texto", content_type="text/plain")
+    assert respuesta.status_code == 400
+
+
+def test_editar_sin_campos(client):
+    tarea_id = crear(client).get_json()["tarea"]["id"]
+    assert client.put(f"/api/tareas/{tarea_id}", json={}).status_code == 400
+
+
+def test_editar_conserva_campos_no_enviados(client):
+    tarea_id = crear(client, descripcion="Original", prioridad="Baja").get_json()["tarea"]["id"]
+    client.put(f"/api/tareas/{tarea_id}", json={"prioridad": "Alta"})
+    tarea = client.get(f"/api/tareas/{tarea_id}").get_json()
+    assert (tarea["descripcion"], tarea["prioridad"]) == ("Original", "Alta")
+
+
+def test_filtro_invalido(client):
+    assert client.get("/api/tareas?estado=Archivada").status_code == 400
+
+
+def test_ruta_api_inexistente_devuelve_json(client):
+    respuesta = client.get("/api/no-existe")
+    assert respuesta.status_code == 404
+    assert respuesta.is_json
+
+
